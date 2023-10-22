@@ -663,7 +663,7 @@ func postIndex(w http.ResponseWriter, r *http.Request) {
 		query,
 		me.ID,
 		mime,
-		filedata,
+		"",
 		r.FormValue("body"),
 	)
 	if err != nil {
@@ -674,6 +674,19 @@ func postIndex(w http.ResponseWriter, r *http.Request) {
 	pid, err := result.LastInsertId()
 	if err != nil {
 		log.Print(err)
+		return
+	}
+
+	ext := "jpg"
+	if mime == "image/png" {
+		ext = "png"
+	}
+	if mime == "image/gif" {
+		ext = "gif"
+	}
+	filename := fmt.Sprintf("image/%d.%s", pid, ext)
+	if err := os.WriteFile(filename, filedata, 0666); err != nil {
+		http.Redirect(w, r, "/", http.StatusInternalServerError)
 		return
 	}
 
