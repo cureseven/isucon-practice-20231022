@@ -69,6 +69,19 @@ type Comment struct {
 	User      User
 }
 
+type CommentWithUser struct {
+	ID              int       `db:"comments.id"`
+	PostID          int       `db:"comments.post_id"`
+	UserID          int       `db:"comments.user_id"`
+	Comment         string    `db:"comments.comment"`
+	CreatedAt       time.Time `db:"comments.created_at"`
+	UserAccountName string    `db:"users.account_name"`
+	UserPasshash    string    `db:"users.passhash"`
+	UserAuthority   int       `db:"users.authority"`
+	UserDelFlg      int       `db:"users.del_flg"`
+	UserCreatedAt   time.Time `db:"users.created_at"`
+}
+
 func init() {
 	memdAddr := os.Getenv("ISUCONP_MEMCACHED_ADDRESS")
 	if memdAddr == "" {
@@ -183,21 +196,41 @@ func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, erro
 			return nil, err
 		}
 
-		query := "SELECT * FROM `comments` WHERE `post_id` = ? ORDER BY `created_at` DESC"
+		query := `
+SELECT comments.*, users.*
+FROM comments
+LEFT JOIN users ON comments.user_id = users.id
+WHERE post_id = ? 
+ORDER BY created_at DESC
+`
 		if !allComments {
 			query += " LIMIT 3"
 		}
-		var comments []Comment
-		err = db.Select(&comments, query, p.ID)
+		var commentWithUsers []CommentWithUser
+		err = db.Select(&commentWithUsers, query, p.ID)
 		if err != nil {
 			return nil, err
 		}
 
-		for i := 0; i < len(comments); i++ {
-			err := db.Get(&comments[i].User, "SELECT * FROM `users` WHERE `id` = ?", comments[i].UserID)
-			if err != nil {
-				return nil, err
+		var comments []Comment
+		for _, commentWithUser := range commentWithUsers {
+			user := User{
+				ID:          commentWithUser.UserID,
+				AccountName: commentWithUser.UserAccountName,
+				Passhash:    commentWithUser.UserPasshash,
+				Authority:   commentWithUser.UserAuthority,
+				CreatedAt:   commentWithUser.UserCreatedAt,
+				DelFlg:      commentWithUser.UserDelFlg,
 			}
+			comment := Comment{
+				ID:        commentWithUser.ID,
+				PostID:    commentWithUser.PostID,
+				UserID:    commentWithUser.UserID,
+				Comment:   commentWithUser.Comment,
+				CreatedAt: commentWithUser.CreatedAt,
+				User:      user,
+			}
+			comments = append(comments, comment)
 		}
 
 		// reverse
