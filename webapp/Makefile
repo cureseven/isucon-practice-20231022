@@ -24,7 +24,7 @@ truncate-logs:
 	sudo journalctl --vacuum-size=1K
 
 pprof: TIME=60
-pprof: PROF_FILE=~/pprof.samples.$(shell TZ=Asia/Tokyo date +"%%H%%M").$(shell git rev-parse HEAD | cut -c 1-8).pb.gz
+pprof: PROF_FILE=~/pprof.samples.$(shell TZ=Asia/Tokyo date +"%H%M").$(shell git rev-parse HEAD | cut -c 1-8).pb.gz
 pprof:
 	curl -sSf "http://localhost:6060/debug/fgprof?seconds=$(TIME)" > $(PROF_FILE)
 	go tool pprof $(PROF_FILE)
