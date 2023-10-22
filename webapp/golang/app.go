@@ -184,7 +184,8 @@ func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, erro
 		}
 
 		query := `
-SELECT comments.id, comments.post_id, comments.user_id, comments.comment, comments.created_at, users.id, users.account_name, users.passhash, users.authority, users.del_flg, users.created_at
+SELECT comments.id, comments.post_id, comments.user_id, comments.comment, comments.created_at,
+       users.id AS 'users.id', users.account_name AS 'users.account_name', users.passhash AS 'users.passhash', users.authority AS 'users.authority', users.del_flg AS 'users.del_flg', users.created_at AS 'users.created_at'
 FROM comments
 LEFT JOIN users ON comments.user_id = users.id
 WHERE post_id = ? 
