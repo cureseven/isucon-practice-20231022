@@ -439,7 +439,9 @@ SELECT posts.id, posts.user_id, posts.body, posts.mime, posts.created_at
 FROM posts 
 LEFT JOIN users ON posts.user_id = users.id
 WHERE user_id = ? AND users.del_flg = 0
-ORDER BY posts.created_at DESC`
+ORDER BY posts.created_at DESC
+LIMIT 20
+`
 	err = db.Select(&results, q, user.ID)
 	if err != nil {
 		log.Print(err)
@@ -576,6 +578,7 @@ SELECT posts.*
 FROM posts 
 LEFT JOIN users ON posts.user_id = users.id
 WHERE posts.id = ? AND users.del_flg = 0
+LIMIT 20
 `
 	err = db.Select(&results, q, pid)
 	if err != nil {
