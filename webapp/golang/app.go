@@ -820,7 +820,7 @@ func main() {
 	)
 
 	db, err = sqlx.Open("mysql", dsn)
-	db.SetMaxIdleConns(200)
+	db.SetMaxOpenConns(200)
 	if err != nil {
 		log.Fatalf("Failed to connect to DB: %s.", err.Error())
 	}
