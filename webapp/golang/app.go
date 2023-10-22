@@ -533,7 +533,7 @@ SELECT posts.id, posts.user_id, posts.body, posts.mime, posts.created_at
 FROM posts
 LEFT JOIN users ON posts.user_id = users.id
 WHERE posts.created_at <= ? AND users.del_flg = 0
-ORDER BY posts.created_at DESC
+ORDER BY posts.created_at DESC LIMIT 20
 `
 	err = db.Select(&results, q, t.Format(ISO8601Format))
 	if err != nil {
