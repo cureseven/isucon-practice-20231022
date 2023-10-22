@@ -66,7 +66,7 @@ type Comment struct {
 	UserID    int       `db:"user_id"`
 	Comment   string    `db:"comment"`
 	CreatedAt time.Time `db:"created_at"`
-	User      User
+	User      User      `db:"users"`
 }
 
 func init() {
@@ -183,7 +183,14 @@ func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, erro
 			return nil, err
 		}
 
-		query := "SELECT * FROM `comments` WHERE `post_id` = ? ORDER BY `created_at` DESC"
+		query := `
+SELECT comments.id, comments.post_id, comments.user_id, comments.comment, comments.created_at,
+       users.id AS 'users.id', users.account_name AS 'users.account_name', users.passhash AS 'users.passhash', users.authority AS 'users.authority', users.del_flg AS 'users.del_flg', users.created_at AS 'users.created_at'
+FROM comments
+INNER JOIN users ON comments.user_id = users.id
+WHERE post_id = ? 
+ORDER BY created_at DESC
+`
 		if !allComments {
 			query += " LIMIT 3"
 		}
@@ -191,13 +198,6 @@ func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, erro
 		err = db.Select(&comments, query, p.ID)
 		if err != nil {
 			return nil, err
-		}
-
-		for i := 0; i < len(comments); i++ {
-			err := db.Get(&comments[i].User, "SELECT * FROM `users` WHERE `id` = ?", comments[i].UserID)
-			if err != nil {
-				return nil, err
-			}
 		}
 
 		// reverse
@@ -389,7 +389,14 @@ func getIndex(w http.ResponseWriter, r *http.Request) {
 
 	results := []Post{}
 
-	err := db.Select(&results, "SELECT `id`, `user_id`, `body`, `mime`, `created_at` FROM `posts` ORDER BY `created_at` DESC")
+	query := `
+SELECT posts.id, posts.user_id, posts.body, posts.mime, posts.created_at 
+FROM posts 
+INNER JOIN users ON posts.user_id = users.id
+WHERE users.del_flg = 0
+ORDER BY posts.created_at DESC limit 20
+`
+	err := db.Select(&results, query)
 	if err != nil {
 		log.Print(err)
 		return
@@ -656,7 +663,7 @@ func postIndex(w http.ResponseWriter, r *http.Request) {
 		query,
 		me.ID,
 		mime,
-		filedata,
+		"",
 		r.FormValue("body"),
 	)
 	if err != nil {
@@ -670,39 +677,20 @@ func postIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ext := "jpg"
+	if mime == "image/png" {
+		ext = "png"
+	}
+	if mime == "image/gif" {
+		ext = "gif"
+	}
+	filename := fmt.Sprintf("image/%d.%s", pid, ext)
+	if err := os.WriteFile(filename, filedata, 0666); err != nil {
+		http.Redirect(w, r, "/", http.StatusInternalServerError)
+		return
+	}
+
 	http.Redirect(w, r, "/posts/"+strconv.FormatInt(pid, 10), http.StatusFound)
-}
-
-func getImage(w http.ResponseWriter, r *http.Request) {
-	pidStr := chi.URLParam(r, "id")
-	pid, err := strconv.Atoi(pidStr)
-	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	post := Post{}
-	err = db.Get(&post, "SELECT * FROM `posts` WHERE `id` = ?", pid)
-	if err != nil {
-		log.Print(err)
-		return
-	}
-
-	ext := chi.URLParam(r, "ext")
-
-	if ext == "jpg" && post.Mime == "image/jpeg" ||
-		ext == "png" && post.Mime == "image/png" ||
-		ext == "gif" && post.Mime == "image/gif" {
-		w.Header().Set("Content-Type", post.Mime)
-		_, err := w.Write(post.Imgdata)
-		if err != nil {
-			log.Print(err)
-			return
-		}
-		return
-	}
-
-	w.WriteHeader(http.StatusNotFound)
 }
 
 func postComment(w http.ResponseWriter, r *http.Request) {
@@ -832,6 +820,8 @@ func main() {
 	)
 
 	db, err = sqlx.Open("mysql", dsn)
+	db.SetMaxOpenConns(100)
+	db.SetMaxIdleConns(100)
 	if err != nil {
 		log.Fatalf("Failed to connect to DB: %s.", err.Error())
 	}
@@ -849,7 +839,6 @@ func main() {
 	r.Get("/posts", getPosts)
 	r.Get("/posts/{id}", getPostsID)
 	r.Post("/", postIndex)
-	r.Get("/image/{id}.{ext}", getImage)
 	r.Post("/comment", postComment)
 	r.Get("/admin/banned", getAdminBanned)
 	r.Post("/admin/banned", postAdminBanned)
