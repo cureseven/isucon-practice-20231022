@@ -185,7 +185,7 @@ func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, erro
 	if err != nil {
 		return nil, err
 	}
-	if err := db.Select(&postComments, query, args...); err != nil {
+	if err := db.Select(&postComments, db.Rebind(query), args...); err != nil {
 		return nil, err
 	}
 	for _, p := range postComments {
