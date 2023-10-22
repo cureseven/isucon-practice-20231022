@@ -435,7 +435,7 @@ func getAccountName(w http.ResponseWriter, r *http.Request) {
 	results := []Post{}
 
 	q := `
-SELECT id, user_id, body, mime, created_at 
+SELECT posts.id, posts.user_id, posts.body, posts.mime, posts.created_at 
 FROM posts 
 LEFT JOIN users ON posts.user_id = user.id
 WHERE user_id = ? AND users.del_flg = 0
@@ -529,7 +529,7 @@ func getPosts(w http.ResponseWriter, r *http.Request) {
 
 	results := []Post{}
 	q := `
-SELECT id, user_id, body, mime, created_at 
+SELECT posts.id, posts.user_id, posts.body, posts.mime, posts.created_at 
 FROM posts 
 LEFT JOIN users ON posts.user_id = user.id
 WHERE posts.created_at <= ? AND users.del_flg = 0
