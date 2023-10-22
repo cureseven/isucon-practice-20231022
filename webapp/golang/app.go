@@ -394,7 +394,7 @@ SELECT posts.id, posts.user_id, posts.body, posts.mime, posts.created_at
 FROM posts 
 LEFT JOIN users ON posts.user_id = users.id
 WHERE users.del_flg = 0
-ORDER BY created_at DESC limit 20
+ORDER BY posts.created_at DESC limit 20
 `
 	err := db.Select(&results, query)
 	if err != nil {
