@@ -202,6 +202,15 @@ func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, erro
 	for _, p := range results {
 		p.CommentCount = postCommentMap[p.ID]
 
+		// 0件のときクエリ叩かない
+		var comments []Comment
+		if p.CommentCount == 0 {
+			p.Comments = comments
+			p.CSRFToken = csrfToken
+			posts = append(posts, p)
+			break
+		}
+
 		query := `
 SELECT comments.id, comments.post_id, comments.user_id, comments.comment, comments.created_at,
        users.id AS 'users.id', users.account_name AS 'users.account_name', users.passhash AS 'users.passhash', users.authority AS 'users.authority', users.del_flg AS 'users.del_flg', users.created_at AS 'users.created_at'
@@ -213,7 +222,6 @@ ORDER BY created_at DESC
 		if !allComments {
 			query += " LIMIT 3"
 		}
-		var comments []Comment
 		err = db.Select(&comments, query, p.ID)
 		if err != nil {
 			return nil, err
