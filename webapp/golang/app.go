@@ -602,10 +602,13 @@ WHERE posts.id = ? AND users.del_flg = 0
 		return
 	}
 
-	posts, err := makePosts(results, getCSRFToken(r), true)
-	if err != nil {
-		log.Print(err)
-		return
+	var posts = []Post{}
+	if len(results) != 0 {
+		posts, err = makePosts(results, getCSRFToken(r), true)
+		if err != nil {
+			log.Print(err)
+			return
+		}
 	}
 
 	if len(posts) == 0 {
