@@ -206,17 +206,9 @@ ORDER BY created_at DESC
 		}
 
 		p.Comments = comments
-
-		err = db.Get(&p.User, "SELECT * FROM `users` WHERE `id` = ?", p.UserID)
-		if err != nil {
-			return nil, err
-		}
-
 		p.CSRFToken = csrfToken
+		posts = append(posts, p)
 
-		if p.User.DelFlg == 0 {
-			posts = append(posts, p)
-		}
 		if len(posts) >= postsPerPage {
 			break
 		}
@@ -442,7 +434,13 @@ func getAccountName(w http.ResponseWriter, r *http.Request) {
 
 	results := []Post{}
 
-	err = db.Select(&results, "SELECT `id`, `user_id`, `body`, `mime`, `created_at` FROM `posts` WHERE `user_id` = ? ORDER BY `created_at` DESC", user.ID)
+	q := `
+SELECT posts.id, posts.user_id, posts.body, posts.mime, posts.created_at 
+FROM posts 
+LEFT JOIN users ON posts.user_id = users.id
+WHERE user_id = ? AND users.del_flg = 0
+ORDER BY posts.created_at DESC`
+	err = db.Select(&results, q, user.ID)
 	if err != nil {
 		log.Print(err)
 		return
@@ -530,7 +528,14 @@ func getPosts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	results := []Post{}
-	err = db.Select(&results, "SELECT `id`, `user_id`, `body`, `mime`, `created_at` FROM `posts` WHERE `created_at` <= ? ORDER BY `created_at` DESC", t.Format(ISO8601Format))
+	q := `
+SELECT posts.id, posts.user_id, posts.body, posts.mime, posts.created_at 
+FROM posts
+LEFT JOIN users ON posts.user_id = users.id
+WHERE posts.created_at <= ? AND users.del_flg = 0
+ORDER BY posts.created_at DESC
+`
+	err = db.Select(&results, q, t.Format(ISO8601Format))
 	if err != nil {
 		log.Print(err)
 		return
@@ -566,7 +571,13 @@ func getPostsID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	results := []Post{}
-	err = db.Select(&results, "SELECT * FROM `posts` WHERE `id` = ?", pid)
+	q := `
+SELECT posts.*
+FROM posts 
+LEFT JOIN users ON posts.user_id = users.id
+WHERE posts.id = ? AND users.del_flg = 0
+`
+	err = db.Select(&results, q, pid)
 	if err != nil {
 		log.Print(err)
 		return
