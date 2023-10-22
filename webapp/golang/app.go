@@ -181,7 +181,13 @@ func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, erro
 	}
 	postCommentMap := map[int]int{}
 
-	query, args, err := sqlx.In("SELECT post_id, COUNT(*) AS `count` FROM `comments` WHERE `post_id` IN (?) GROUP BY `post_id`", results)
+	// resultsからpost_idを取り出す
+	var postIds []int
+	for _, p := range results {
+		postIds = append(postIds, p.ID)
+	}
+
+	query, args, err := sqlx.In("SELECT post_id, COUNT(*) AS `count` FROM `comments` WHERE `post_id` IN (?) GROUP BY `post_id`", postIds)
 	if err != nil {
 		return nil, err
 	}
