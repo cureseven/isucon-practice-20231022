@@ -31,3 +31,6 @@ pprof:
 
 bench:
 	/home/isucon/private_isu/benchmarker/bin/benchmarker -u /home/isucon/private_isu/benchmarker/userdata -t http://localhost/
+
+kataribe:
+	cd ../.. && sudo cat /var/log/nginx/access.log | ./kataribe
